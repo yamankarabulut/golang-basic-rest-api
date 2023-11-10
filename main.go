@@ -3,29 +3,29 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-/*
 var (
 
-	server      *gin.Engine
-	ctx         context.Context
-	collection  *mongo.Collection
-	mongoclient *mongo.Client
-	err         error
-
+	//server      *gin.Engine
+	//ctx         context.Context
+	//collection  *mongo.Collection
+	client     *mongo.Client
+	collection *mongo.Collection
+	clientOnce sync.Once
+	err        error
 )
-*/
 
 type Data struct {
 	Name     string  `json:"name" binding:"required"` // validation safhasında mongo şemasında required yapmak gibi?
@@ -187,6 +187,50 @@ func getDatas(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, dataset)
 }
 
+func getDatas2(c *gin.Context) {
+	if client == nil {
+		var err error
+		client, err = mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+		fmt.Println("client gelmemiş")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	fmt.Println("test")
+
+	// Initialize the MongoDB collection if not done already
+	if collection == nil {
+		// Replace "your_database" and "your_collection" with your actual database and collection names
+		collection = client.Database("go-testdb").Collection("users")
+	}
+	fmt.Println("test2")
+
+	// Query MongoDB to retrieve all documents in the collection
+	cursor, err := collection.Find(context.Background(), nil)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
+	}
+	defer cursor.Close(context.Background())
+	fmt.Println("test3")
+
+	var results []Data
+	for cursor.Next(context.Background()) {
+		var data Data
+		err := cursor.Decode(&data)
+		if err != nil {
+			fmt.Println(err)
+			// Handle error as needed
+		}
+		results = append(results, data)
+	}
+	fmt.Println(results)
+
+	// Send the results as JSON
+	c.JSON(http.StatusOK, results)
+}
+
 func addData(c *gin.Context) {
 	var newData Data
 	// Call BindJSON to bind the received JSON to
@@ -279,31 +323,31 @@ func init() {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 	viper.Set("mongoDBURL", viper.GetString("mongoDBURL")+viper.GetString("dbname"))
+	// executed only once
+	clientOnce.Do(func() {
+		var err error
+		// initte yapılıp global variablelar arasında eklenmeli ??
+		client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
+		if err != nil {
+			panic(err)
+		}
+		if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
+			panic(err)
+		}
+		//global variable'lar arasından seçilebilmeli ??
+		usersCollection := client.Database(viper.GetString("config.dbname")).Collection("users")
+		// create fake data DB
+		for _, data := range dataset {
+			_, err := usersCollection.InsertOne(context.Background(), data)
+			if err != nil {
+				fmt.Println(err)
+				// Handle error as needed
+			}
+		}
+	})
 }
 
 func main() {
-
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
-	if err != nil {
-		panic(err)
-	}
-	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-		panic(err)
-	}
-	usersCollection := client.Database(viper.GetString("config.dbname")).Collection("users")
-	fmt.Println(usersCollection)
-
-	// insert a single document into a collection
-	// create a bson.D object
-	user := bson.D{{"fullName", "User 1"}, {"age", 30}}
-	// insert the bson object using InsertOne()
-	result, err := usersCollection.InsertOne(context.TODO(), user)
-	// check for errors in the insertion
-	if err != nil {
-		panic(err)
-	}
-	// display the id of the newly inserted object
-	fmt.Println(result.InsertedID)
 
 	//gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
@@ -318,12 +362,14 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12,
 	}))
+
 	// proje 500 ile crash yerse yeniden ayağa kaldırıyor?
 	// bütün projeyi try-catch bloğuna sarmak gibi?
 	router.Use(gin.Recovery())
 
 	/* GET routes */
-	router.GET("/dataset", randomMW(), getDatas)
+	router.GET("/dataset", getDatas)
+	router.GET("/dataset2", randomMW(), getDatas2)
 	router.GET("/dataset/:id", getDataByID)
 	//router.GET("/dataset", randomFunc)
 
