@@ -1,0 +1,8 @@
+{
+    "config": {
+        "port": "9090",
+        "appUrl": "localhost:",
+        "dbname": "go-testdb",
+        "mongoDBURL": "mongodb://localhost:27017/"
+    }
+}

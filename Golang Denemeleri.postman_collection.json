@@ -1,0 +1,72 @@
+{
+	"info": {
+		"_postman_id": "36c54c70-406f-4f8d-9e0c-e810c3d2127c",
+		"name": "Golang Denemeleri",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "21157856"
+	},
+	"item": [
+		{
+			"name": "add-data",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "covert-ids",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:9090/convert-ids",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"convert-ids"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "convert-ids-with-pointers",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:9090/convert-ids-with-pointers",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"convert-ids-with-pointers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "convert-ids-without-pointers",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:9090/convert-ids-without-pointers",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"convert-ids-without-pointers"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
