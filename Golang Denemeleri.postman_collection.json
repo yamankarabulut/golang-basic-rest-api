@@ -9,15 +9,34 @@
 		{
 			"name": "add-data",
 			"request": {
-				"method": "GET",
-				"header": []
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Yaman\",\n    \"language\": \"Turkish\",\n    \"id\": \"test\",\n    \"bio\": \"foul creature of the night\",\n    \"version\": 0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:9090/add-data",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"add-data"
+					]
+				}
 			},
 			"response": []
 		},
 		{
 			"name": "covert-ids",
 			"request": {
-				"method": "POST",
+				"method": "PATCH",
 				"header": [],
 				"url": {
 					"raw": "localhost:9090/convert-ids",
@@ -35,7 +54,7 @@
 		{
 			"name": "convert-ids-with-pointers",
 			"request": {
-				"method": "POST",
+				"method": "PATCH",
 				"header": [],
 				"url": {
 					"raw": "localhost:9090/convert-ids-with-pointers",
@@ -53,7 +72,7 @@
 		{
 			"name": "convert-ids-without-pointers",
 			"request": {
-				"method": "POST",
+				"method": "PATCH",
 				"header": [],
 				"url": {
 					"raw": "localhost:9090/convert-ids-without-pointers",
@@ -63,6 +82,156 @@
 					"port": "9090",
 					"path": [
 						"convert-ids-without-pointers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "covert-mongo-ids",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"url": {
+					"raw": "localhost:9090/convert-mongo-ids",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"convert-mongo-ids"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "dataset-mongodb",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/mongodb",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"mongodb"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "users-between-id-values",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/mongodb/between-id-values/4/6",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"mongodb",
+						"between-id-values",
+						"4",
+						"6"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add-data-mongo",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Yaman\",\n    \"language\": \"Turkish\",\n    \"id\": \"20\",\n    \"bio\": \"foul creature of the night\",\n    \"version\": 9.90\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:9090/add-data-mongo",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"add-data-mongo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "users-between-version-values",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/mongodb/between-version-values?startValue=0.25&endValue=6.45",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"mongodb",
+						"between-version-values"
+					],
+					"query": [
+						{
+							"key": "startValue",
+							"value": "0.25"
+						},
+						{
+							"key": "endValue",
+							"value": "6.45"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "users-between-version-and-lang-values",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/mongodb/between-version-and-lang-values?sv=0.25&ev=2&lang=Sindhi",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"mongodb",
+						"between-version-and-lang-values"
+					],
+					"query": [
+						{
+							"key": "sv",
+							"value": "0.25"
+						},
+						{
+							"key": "ev",
+							"value": "2"
+						},
+						{
+							"key": "lang",
+							"value": "Sindhi"
+						}
 					]
 				}
 			},
