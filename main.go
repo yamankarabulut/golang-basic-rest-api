@@ -514,15 +514,13 @@ func getUsersWhoSpeakTwoLanguages(c *gin.Context) {
 	if collection == nil {
 		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
-	lang1 := c.Param("lang1")
-	lang2 := c.Param("lang2")
 
-	opts := options.Find().SetSort(bson.D{{Key: "id", Value: 1}})
+	opts := options.Find().SetSort(bson.D{{Key: "version", Value: 1}}) // version'a göre artacak şekilde
 	filter := bson.D{
 		{Key: "$or",
 			Value: bson.A{
-				bson.D{{Key: "language", Value: lang1}},
-				bson.D{{Key: "language", Value: lang2}},
+				bson.D{{Key: "language", Value: c.Query("lang1")}},
+				bson.D{{Key: "language", Value: c.Query("lang2")}},
 			}},
 	}
 
@@ -756,12 +754,12 @@ func main() {
 	/* GET routes */
 	router.GET("/dataset", getDatas)
 	router.GET("/mongodb", randomMW(), getDatasMongo)
+	router.GET("/mongodb/either-languages", getUsersWhoSpeakTwoLanguages)
+	router.GET("/mongodb/between-version-values", getDatasBetweenGivenVersionValuesMongo)
+	router.GET("/mongodb/between-version-and-lang-values", getDatasBetweenGivenVersionAndLangValuesMongo)
 	router.GET("/dataset/:id", getDataByID)
 	router.GET("/mongodb/:id", getDataByIDMongo)
 	router.GET("/mongodb/between-id-values/:startValue/:endValue", getDatasBetweenGivenIdValuesMongo)
-	router.GET("/mongodb/either-languages/:lang1/:lang2", getUsersWhoSpeakTwoLanguages)
-	router.GET("/mongodb/between-version-values", getDatasBetweenGivenVersionValuesMongo)
-	router.GET("/mongodb/between-version-and-lang-values", getDatasBetweenGivenVersionAndLangValuesMongo)
 
 	//router.GET("/dataset", randomFunc)
 
