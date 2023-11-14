@@ -239,6 +239,48 @@ func addData(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newData)
 }
 
+func updateData(c *gin.Context) {
+	var changedUser Data
+
+	if err := c.ShouldBindJSON(&changedUser); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if client == nil {
+		var err error
+		client, err = mongo.Connect(context.Background(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
+		fmt.Println("client gelmemiş")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	// Initialize the MongoDB collection if not done already
+	if collection == nil {
+		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	}
+
+	filter := bson.D{{Key: "id", Value: changedUser.ID}}
+	update := bson.D{{Key: "$set", Value: bson.D{
+		{Key: "name", Value: changedUser.Name},
+		{Key: "language", Value: changedUser.Language},
+		{Key: "bio", Value: changedUser.Bio},
+		{Key: "version", Value: changedUser.Version},
+	}}}
+
+	// Set a timeout for the operation. --sorgu gereğinden fazla uzun sürerse servisin yanıtsız kalmasını engeller
+	// 5 saniye boyunca bulamazsa cancel fonksiyonu çalışır ?
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var result Data
+
+	collection.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&result)
+
+	// Return the result as JSON.
+	c.JSON(http.StatusOK, result)
+}
+
 func addDataMongo(c *gin.Context) {
 	var newUser Data
 
@@ -677,6 +719,7 @@ func main() {
 
 	/* POST routes */
 	router.POST("/add-data", addData)
+	router.POST("/update-user", updateData)
 	router.POST("/add-data-mongo", addDataMongo)
 	//router.POST("/convert-ids", setIDIntWrongWay)
 	router.PATCH("/convert-ids", setIDIntCorrectWay)
