@@ -670,13 +670,11 @@ func setIDIntCorrectPointerWay(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, dataset)
 }
 
+/*
 func test(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
 }
-
-func test2(c *gin.Context) {
-	c.HTML(http.StatusOK, "index2.html", nil)
-}
+*/
 
 // Middlewares
 func randomMW() gin.HandlerFunc {
@@ -791,8 +789,7 @@ func main() {
 	router.GET("/mongodb/:id", getDataByIDMongo)
 	router.GET("/mongodb/between-id-values/:startValue/:endValue", getDatasBetweenGivenIdValuesMongo)
 
-	router.GET("/test", test)
-	router.GET("/test2", test2)
+	//router.GET("/test", test)
 
 	//router.GET("/dataset", randomFunc)
 
