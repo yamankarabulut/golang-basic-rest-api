@@ -204,9 +204,10 @@ func getDatasMongo(c *gin.Context) {
 	if collection == nil {
 		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
-
+	opts := options.Find().SetLimit(5)
+	filter := bson.M{}
 	// = Model.find({})
-	cursor, err := collection.Find(context.Background(), bson.M{})
+	cursor, err := collection.Find(context.Background(), filter, opts)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
@@ -259,7 +260,7 @@ func updateData(c *gin.Context) {
 	if collection == nil {
 		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
-
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
 	filter := bson.D{{Key: "id", Value: changedUser.ID}}
 	update := bson.D{{Key: "$set", Value: bson.D{
 		{Key: "name", Value: changedUser.Name},
@@ -267,16 +268,12 @@ func updateData(c *gin.Context) {
 		{Key: "bio", Value: changedUser.Bio},
 		{Key: "version", Value: changedUser.Version},
 	}}}
-
 	// Set a timeout for the operation. --sorgu gereğinden fazla uzun sürerse servisin yanıtsız kalmasını engeller
 	// 5 saniye boyunca bulamazsa cancel fonksiyonu çalışır ?
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	var result Data
-
-	collection.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&result)
-
+	collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	// Return the result as JSON.
 	c.JSON(http.StatusOK, result)
 }
@@ -478,6 +475,56 @@ func getDatasBetweenGivenVersionAndLangValuesMongo(c *gin.Context) {
 	opts := options.Find().SetSort(bson.D{{Key: "version", Value: 1}})
 	filter := bson.M{"version": bson.M{"$gte": sv, "$lt": ev}, "language": c.Query("lang")}
 	fmt.Println(filter)
+
+	cursor, err := collection.Find(context.Background(), filter, opts)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var results []Data
+	for cursor.Next(context.Background()) {
+		var data Data
+		err := cursor.Decode(&data)
+		if err != nil {
+			fmt.Println(err)
+			// Handle error as needed
+		}
+		results = append(results, data)
+	}
+
+	// Send the results as JSON
+	c.JSON(http.StatusOK, results)
+}
+
+func getUsersWhoSpeakTwoLanguages(c *gin.Context) {
+
+	if client == nil {
+		var err error
+		client, err = mongo.Connect(context.Background(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
+		fmt.Println("client gelmemiş")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Initialize the MongoDB collection if not done already
+	if collection == nil {
+		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	}
+	lang1 := c.Param("lang1")
+	lang2 := c.Param("lang2")
+
+	opts := options.Find().SetSort(bson.D{{Key: "id", Value: 1}})
+	filter := bson.D{
+		{Key: "$or",
+			Value: bson.A{
+				bson.D{{Key: "language", Value: lang1}},
+				bson.D{{Key: "language", Value: lang2}},
+			}},
+	}
 
 	cursor, err := collection.Find(context.Background(), filter, opts)
 	if err != nil {
@@ -712,6 +759,7 @@ func main() {
 	router.GET("/dataset/:id", getDataByID)
 	router.GET("/mongodb/:id", getDataByIDMongo)
 	router.GET("/mongodb/between-id-values/:startValue/:endValue", getDatasBetweenGivenIdValuesMongo)
+	router.GET("/mongodb/either-languages/:lang1/:lang2", getUsersWhoSpeakTwoLanguages)
 	router.GET("/mongodb/between-version-values", getDatasBetweenGivenVersionValuesMongo)
 	router.GET("/mongodb/between-version-and-lang-values", getDatasBetweenGivenVersionAndLangValuesMongo)
 
