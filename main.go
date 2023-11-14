@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -227,7 +229,10 @@ func getDatasMongo(c *gin.Context) {
 	}
 
 	// Send the results as JSON
-	c.JSON(http.StatusOK, results)
+	//c.JSON(http.StatusOK, results)
+	c.HTML(http.StatusOK, "users.html", gin.H{
+		"results": results,
+	})
 }
 
 func addData(c *gin.Context) {
@@ -330,7 +335,6 @@ func getDataByID(c *gin.Context) {
 }
 
 func getDataByIDMongo(c *gin.Context) {
-
 	if client == nil {
 		var err error
 		client, err = mongo.Connect(context.Background(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
@@ -339,21 +343,17 @@ func getDataByIDMongo(c *gin.Context) {
 			log.Fatal(err)
 		}
 	}
-
 	// Initialize the MongoDB collection if not done already
 	if collection == nil {
 		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
-
 	id := c.Param("id")
 	filter := bson.D{{Key: "id", Value: id}}
 	var result Data
-
 	// Set a timeout for the operation. --sorgu gereğinden fazla uzun sürerse servisin yanıtsız kalmasını engeller
 	// 5 saniye boyunca bulamazsa cancel fonksiyonu çalışır ?
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	err := collection.FindOne(ctx, filter).Decode(&result)
 	if err == mongo.ErrNoDocuments {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -362,8 +362,13 @@ func getDataByIDMongo(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
-	// Return the result as JSON.
-	c.JSON(http.StatusOK, result)
+	c.HTML(http.StatusOK, "user-info.html", gin.H{
+		"id":       result.ID,
+		"name":     result.Name,
+		"language": result.Language,
+		"bio":      result.Bio,
+		"version":  result.Version,
+	})
 }
 
 func getDatasBetweenGivenIdValuesMongo(c *gin.Context) {
@@ -665,6 +670,15 @@ func setIDIntCorrectPointerWay(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, dataset)
 }
 
+func test(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.html", nil)
+}
+
+func test2(c *gin.Context) {
+	c.HTML(http.StatusOK, "index2.html", nil)
+}
+
+// Middlewares
 func randomMW() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		fmt.Printf("MW çalıştı.\n")
@@ -735,6 +749,22 @@ func init() {
 func main() {
 	//gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+	router.SetFuncMap(template.FuncMap{
+		"upper": strings.ToUpper,
+		"loop": func(from, to int) <-chan int {
+			ch := make(chan int)
+			go func() {
+				for i := from; i <= to; i++ {
+					ch <- i
+				}
+				close(ch)
+			}()
+			return ch
+		},
+	})
+	//router.Static("/assets", "./assets")
+	router.LoadHTMLGlob("./assets/templates/*.html")
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://" + viper.GetString("config.appUrl") + viper.GetString("config.port"),
@@ -760,6 +790,9 @@ func main() {
 	router.GET("/dataset/:id", getDataByID)
 	router.GET("/mongodb/:id", getDataByIDMongo)
 	router.GET("/mongodb/between-id-values/:startValue/:endValue", getDatasBetweenGivenIdValuesMongo)
+
+	router.GET("/test", test)
+	router.GET("/test2", test2)
 
 	//router.GET("/dataset", randomFunc)
 

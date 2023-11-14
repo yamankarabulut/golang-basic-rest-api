@@ -1,0 +1,14 @@
+<html>
+    <title>Users</title>
+    <h3 style="color:rgb(0, 255, 76);"> {{ range $t := loop 0 100}} # {{end}}</h3>
+    {{ range $index, $element := .results }}
+        <h3 style="color:rgb(0, 255, 76);"> {{ range $t := loop 0 100}} # {{end}}</h3>
+        <h1> {{ $element.ID }} ID'li kullanıcı bilgileri</h1>
+        <h2 style="color:rgb(255, 0, 204);"> Name: {{ $element.Name }}</h2>
+        <h2 style="color:rgb(0, 221, 255);"> Language: {{ $element.Language }}</h2>
+        <h3 style="color:rgb(255, 200, 0);"> Bio: {{ $element.Bio }}</h2>
+        <h5 style="color:rgb(56, 14, 3);"> Version: {{ $element.Version }}</h5>
+        <h3 style="color:rgb(0, 255, 76);"> {{ range $t := loop 0 100}} # {{end}}</h3>
+    {{ end }}
+    <h3 style="color:rgb(0, 255, 76);"> {{ range $t := loop 0 100}} # {{end}}</h3>
+</html>
