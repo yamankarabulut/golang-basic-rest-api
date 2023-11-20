@@ -850,7 +850,7 @@ func main() {
 	router.GET("/mongodb/between-id-values/:startValue/:endValue", getDatasBetweenGivenIdValuesMongo)
 
 	//router.GET("/test", test)
-	router.GET("/test", testFunc)
+	router.GET("/test", testFunc2)
 
 	/* POST routes */
 	router.POST("/add-data", addData)
