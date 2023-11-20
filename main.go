@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -25,10 +24,10 @@ var (
 	//server      *gin.Engine
 	//ctx         context.Context
 	//collection  *mongo.Collection
-	client     *mongo.Client
-	collection *mongo.Collection
-	clientOnce sync.Once
+	client *mongo.Client
+	users  *mongo.Collection
 	//err        error
+
 )
 
 type Data struct {
@@ -210,13 +209,13 @@ func getDatasMongo(c *gin.Context) {
 	}
 
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 	opts := options.Find().SetLimit(5)
 	filter := bson.M{}
 	// = Model.find({})
-	cursor, err := collection.Find(context.Background(), filter, opts)
+	cursor, err := users.Find(context.Background(), filter, opts)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
@@ -269,8 +268,8 @@ func updateData(c *gin.Context) {
 		}
 	}
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
 	filter := bson.D{{Key: "id", Value: changedUser.ID}}
@@ -285,7 +284,7 @@ func updateData(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	var result Data
-	collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	users.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	// Return the result as JSON.
 	c.JSON(http.StatusOK, result)
 }
@@ -302,7 +301,7 @@ func addDataMongo(c *gin.Context) {
 		}
 	}
 
-	collection := client.Database(viper.GetString("config.dbname")).Collection("users")
+	users := client.Database(viper.GetString("config.dbname")).Collection("users")
 	if err := c.ShouldBindJSON(&newUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -312,7 +311,7 @@ func addDataMongo(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	result, err := collection.InsertOne(ctx, newUser)
+	result, err := users.InsertOne(ctx, newUser)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
@@ -320,7 +319,7 @@ func addDataMongo(c *gin.Context) {
 	//fmt.Println(result)
 	// yukarıkdaki result, insertedUser'ın id'sini döndürüyormuş
 	var insertedUser Data
-	err = collection.FindOne(ctx, bson.M{"_id": result.InsertedID}).Decode(&insertedUser)
+	err = users.FindOne(ctx, bson.M{"_id": result.InsertedID}).Decode(&insertedUser)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated document"})
 		return
@@ -351,8 +350,8 @@ func getDataByIDMongo(c *gin.Context) {
 		}
 	}
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 	id := c.Param("id")
 	filter := bson.D{{Key: "id", Value: id}}
@@ -361,7 +360,7 @@ func getDataByIDMongo(c *gin.Context) {
 	// 5 saniye boyunca bulamazsa cancel fonksiyonu çalışır ?
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err := collection.FindOne(ctx, filter).Decode(&result)
+	err := users.FindOne(ctx, filter).Decode(&result)
 	if err == mongo.ErrNoDocuments {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -390,8 +389,8 @@ func getDatasBetweenGivenIdValuesMongo(c *gin.Context) {
 	}
 
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 	startValue := c.Param("startValue")
 	endValue := c.Param("endValue")
@@ -399,7 +398,7 @@ func getDatasBetweenGivenIdValuesMongo(c *gin.Context) {
 	opts := options.Find().SetSort(bson.D{{"id", 1}})
 	filter := bson.M{"id": bson.M{"$gte": startValue, "$lt": endValue}}
 
-	cursor, err := collection.Find(context.Background(), filter, opts)
+	cursor, err := users.Find(context.Background(), filter, opts)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
@@ -434,8 +433,8 @@ func getDatasBetweenGivenVersionValuesMongo(c *gin.Context) {
 	}
 
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 	startValue, _ := strconv.ParseFloat(c.Query("startValue"), 64)
 	endValue, _ := strconv.ParseFloat(c.Query("endValue"), 64)
@@ -443,7 +442,7 @@ func getDatasBetweenGivenVersionValuesMongo(c *gin.Context) {
 	opts := options.Find().SetSort(bson.D{{"version", 1}})
 	filter := bson.M{"version": bson.M{"$gte": startValue, "$lt": endValue}}
 
-	cursor, err := collection.Find(context.Background(), filter, opts)
+	cursor, err := users.Find(context.Background(), filter, opts)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
@@ -478,8 +477,8 @@ func getDatasBetweenGivenVersionAndLangValuesMongo(c *gin.Context) {
 	}
 
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 	sv, _ := strconv.ParseFloat(c.Query("sv"), 64)
 	ev, _ := strconv.ParseFloat(c.Query("ev"), 64)
@@ -488,7 +487,7 @@ func getDatasBetweenGivenVersionAndLangValuesMongo(c *gin.Context) {
 	filter := bson.M{"version": bson.M{"$gte": sv, "$lt": ev}, "language": c.Query("lang")}
 	fmt.Println(filter)
 
-	cursor, err := collection.Find(context.Background(), filter, opts)
+	cursor, err := users.Find(context.Background(), filter, opts)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
@@ -523,8 +522,8 @@ func getUsersWhoSpeakTwoLanguages(c *gin.Context) {
 	}
 
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 
 	opts := options.Find().SetSort(bson.D{{Key: "version", Value: 1}}) // version'a göre artacak şekilde
@@ -536,7 +535,7 @@ func getUsersWhoSpeakTwoLanguages(c *gin.Context) {
 			}},
 	}
 
-	cursor, err := collection.Find(context.Background(), filter, opts)
+	cursor, err := users.Find(context.Background(), filter, opts)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
@@ -590,16 +589,16 @@ func convertIDsMongo(c *gin.Context) {
 	}
 
 	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	if users == nil {
+		users = client.Database(viper.GetString("config.dbname")).Collection("users")
 	}
 
 	// Set a timeout for the operation.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Find all documents in the collection.
-	cursor, err := collection.Find(ctx, bson.D{})
+	// Find all documents in the users.
+	cursor, err := users.Find(ctx, bson.D{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
@@ -644,7 +643,7 @@ func convertIDsMongo(c *gin.Context) {
 
 		// Find, update, and get the document.
 		var updatedUser Data
-		err := collection.FindOneAndUpdate(ctx, bson.M{"id": user.ID}, update, options).Decode(&updatedUser)
+		err := users.FindOneAndUpdate(ctx, bson.M{"id": user.ID}, update, options).Decode(&updatedUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
@@ -683,59 +682,6 @@ func test(c *gin.Context) {
 }
 */
 
-func testFunc(c *gin.Context) {
-	var params Params
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if client == nil {
-		var err error
-		client, err = mongo.Connect(context.Background(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
-		fmt.Println("client gelmemiş")
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
-	}
-
-	filter := bson.D{
-		{Key: "$or",
-			Value: bson.A{
-				bson.M{"version": bson.M{"$gte": params.VersionStartValue, "$lt": params.VersionEndValue}, "language": params.Lang1},
-				bson.M{"version": bson.M{"$gte": params.VersionStartValue, "$lt": params.VersionEndValue}, "language": params.Lang2},
-			}},
-	}
-
-	cursor, err := collection.Find(context.Background(), filter)
-	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-		return
-	}
-	defer cursor.Close(context.Background())
-
-	var results []Data
-	for cursor.Next(context.Background()) {
-		var data Data
-		err := cursor.Decode(&data)
-		if err != nil {
-			fmt.Println(err)
-			// Handle error as needed
-		}
-		results = append(results, data)
-	}
-
-	// Send the results as JSON
-	c.JSON(http.StatusOK, results)
-}
-
 // Middlewares
 func randomMW() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -772,36 +718,36 @@ func init() {
 	}
 	viper.Set("mongoDBURL", viper.GetString("mongoDBURL")+viper.GetString("dbname"))
 	// executed only once
-	clientOnce.Do(func() {
-		var err error
-		// initte yapılıp global variable'lar arasında eklenmeli ??
-		client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
-		if err != nil {
-			panic(err)
-		}
-		if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-			panic(err)
-		}
-		//global variable'lar arasından seçilebilmeli ??
-		usersCollection := client.Database(viper.GetString("config.dbname")).Collection("users")
 
-		filter := bson.M{}
-		count, err := usersCollection.CountDocuments(context.TODO(), filter)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("COUNT NUMBER: ", count)
-		if count <= 0 {
-			// create fake data DB
-			for _, data := range dataset {
-				_, err := usersCollection.InsertOne(context.Background(), data)
-				if err != nil {
-					fmt.Println(err)
-					// Handle errors
-				}
+	// var err error
+	// initte yapılıp global variable'lar arasında eklenmeli ??
+
+	client, err = mongo.Connect(context.TODO(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
+	if err != nil {
+		panic(err)
+	}
+	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
+		panic(err)
+	}
+	// global variable'lar collection'lar ile doldurulur
+	users = client.Database(viper.GetString("config.dbname")).Collection("users")
+
+	filter := bson.M{}
+	count, err := users.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("COUNT NUMBER: ", count)
+	if count <= 0 {
+		// create fake data DB
+		for _, data := range dataset {
+			_, err := users.InsertOne(context.Background(), data)
+			if err != nil {
+				fmt.Println(err)
+				// Handle errors
 			}
 		}
-	})
+	}
 }
 
 func main() {
@@ -850,7 +796,7 @@ func main() {
 	router.GET("/mongodb/between-id-values/:startValue/:endValue", getDatasBetweenGivenIdValuesMongo)
 
 	//router.GET("/test", test)
-	router.GET("/test", testFunc2)
+	router.POST("/test", testFunc)
 
 	/* POST routes */
 	router.POST("/add-data", addData)

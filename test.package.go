@@ -3,17 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func testFunc2(c *gin.Context) {
+func testFunc(c *gin.Context) {
 	var params Params
 
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -21,19 +17,19 @@ func testFunc2(c *gin.Context) {
 		return
 	}
 
-	if client == nil {
-		var err error
-		client, err = mongo.Connect(context.Background(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
-		fmt.Println("client gelmemiş")
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	// if client == nil {
+	// 	var err error
+	// 	client, err = mongo.Connect(context.Background(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
+	// 	fmt.Println("client gelmemiş")
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// }
 
-	// Initialize the MongoDB collection if not done already
-	if collection == nil {
-		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
-	}
+	// // Initialize the MongoDB collection if not done already
+	// if collection == nil {
+	// 	collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	// }
 
 	filter := bson.D{
 		{Key: "$or",
@@ -43,7 +39,25 @@ func testFunc2(c *gin.Context) {
 			}},
 	}
 
-	cursor, err := collection.Find(context.Background(), filter)
+	fmt.Println(filter)
+
+	filter2 := bson.D{
+		{Key: "$and",
+			Value: bson.A{
+				bson.D{{Key: "version", Value: bson.M{"$gte": params.VersionStartValue, "$lt": params.VersionEndValue}}},
+				bson.D{
+					{Key: "$or",
+						Value: bson.A{
+							bson.M{"language": params.Lang1},
+							bson.M{"language": params.Lang2},
+						}},
+				},
+			},
+		},
+	}
+	//fmt.Println(filter2)
+
+	cursor, err := users.Find(context.Background(), filter2)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
