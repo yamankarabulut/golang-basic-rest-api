@@ -125,6 +125,25 @@
 			"response": []
 		},
 		{
+			"name": "user-info-with-id",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/mongodb",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"mongodb"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "users-between-id-values",
 			"request": {
 				"method": "GET",
@@ -289,6 +308,37 @@
 							"key": "lang2",
 							"value": "Sindhi"
 						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "test",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"versionStartValue\": 1,\n    \"versionEndValue\": 5,\n    \"lang1\": \"Uyghur\",\n    \"lang2\": \"Sindhi\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9090/test",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"test"
 					]
 				}
 			},

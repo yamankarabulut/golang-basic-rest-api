@@ -44,6 +44,13 @@ type User struct {
 	Age      int    `json:"age" bson:"age"`
 }
 
+type Params struct {
+	VersionStartValue float64 `json:"versionStartValue" `
+	VersionEndValue   float64 `json:"versionEndValue" `
+	Lang1             string  `json:"lang1"`
+	Lang2             string  `json:"lang2"`
+}
+
 var dataset = []Data{
 	{
 		Name:     "Adeel Solangi",
@@ -676,6 +683,59 @@ func test(c *gin.Context) {
 }
 */
 
+func testFunc(c *gin.Context) {
+	var params Params
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if client == nil {
+		var err error
+		client, err = mongo.Connect(context.Background(), options.Client().ApplyURI(viper.GetString("config.mongoDBURL")))
+		fmt.Println("client gelmemiş")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Initialize the MongoDB collection if not done already
+	if collection == nil {
+		collection = client.Database(viper.GetString("config.dbname")).Collection("users")
+	}
+
+	filter := bson.D{
+		{Key: "$or",
+			Value: bson.A{
+				bson.M{"version": bson.M{"$gte": params.VersionStartValue, "$lt": params.VersionEndValue}, "language": params.Lang1},
+				bson.M{"version": bson.M{"$gte": params.VersionStartValue, "$lt": params.VersionEndValue}, "language": params.Lang2},
+			}},
+	}
+
+	cursor, err := collection.Find(context.Background(), filter)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var results []Data
+	for cursor.Next(context.Background()) {
+		var data Data
+		err := cursor.Decode(&data)
+		if err != nil {
+			fmt.Println(err)
+			// Handle error as needed
+		}
+		results = append(results, data)
+	}
+
+	// Send the results as JSON
+	c.JSON(http.StatusOK, results)
+}
+
 // Middlewares
 func randomMW() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -790,8 +850,7 @@ func main() {
 	router.GET("/mongodb/between-id-values/:startValue/:endValue", getDatasBetweenGivenIdValuesMongo)
 
 	//router.GET("/test", test)
-
-	//router.GET("/dataset", randomFunc)
+	router.GET("/test", testFunc)
 
 	/* POST routes */
 	router.POST("/add-data", addData)
