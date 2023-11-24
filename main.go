@@ -23,11 +23,8 @@ var (
 
 	//server      *gin.Engine
 	//ctx         context.Context
-	//collection  *mongo.Collection
 	client *mongo.Client
 	users  *mongo.Collection
-	//err        error
-
 )
 
 type Data struct {
@@ -690,25 +687,6 @@ func randomMW() gin.HandlerFunc {
 	}
 }
 
-/* func randomFunc(c *gin.Context) {
-	// Perform a MongoDB query to get BSON data
-	result := collection.FindOne(context.Background(), bson.M{"fullName": "User 1"})
-	if result.Err() != nil {
-		fmt.Println("Error fetching data from MongoDB:", result.Err())
-		return
-	}
-	fmt.Println(result)
-
-	// Decode BSON data into a Go struct
-	var user User
-	err = result.Decode(&user)
-	if err != nil {
-		fmt.Println("Error decoding BSON data:", err)
-		return
-	}
-	c.JSON(http.StatusOK, user)
-} */
-
 func init() {
 	defer fmt.Printf("Initializing complete.\n")
 	viper.SetConfigFile("config.json")
@@ -739,7 +717,7 @@ func init() {
 	}
 	fmt.Println("COUNT NUMBER: ", count)
 	if count <= 0 {
-		// create fake data DB
+		// to create a fake DB
 		for _, data := range dataset {
 			_, err := users.InsertOne(context.Background(), data)
 			if err != nil {
